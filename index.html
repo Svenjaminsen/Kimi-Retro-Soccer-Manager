@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Fantasy Football</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background: #000;
+            color: #00ff00;
+            overflow-x: hidden;
+        }
+        
+        .crt-effect {
+            position: relative;
+        }
+        
+        .crt-effect::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        .pixel-border {
+            border: 4px solid #00ff00;
+            box-shadow: 
+                0 0 0 2px #000,
+                0 0 0 6px #00ff00;
+        }
+        
+        .glow-text {
+            text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00, 0 0 30px #00ff00;
+        }
+        
+        .scanline {
+            animation: scanline 8s linear infinite;
+        }
+        
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100vh); }
+        }
+        
+        .pixel-button {
+            transition: all 0.1s;
+        }
+        
+        .pixel-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+        
+        .pixel-button:active {
+            transform: scale(0.95);
+        }
+        
+        .loading-dots::after {
+            content: '';
+            animation: dots 2s infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+        
+        .screen-transition {
+            animation: screenFade 0.3s ease-in-out;
+        }
+        
+        @keyframes screenFade {
+            0% { opacity: 0; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .match-flash {
+            animation: matchFlash 0.5s ease-in-out;
+        }
+        
+        @keyframes matchFlash {
+            0%, 100% { background-color: transparent; }
+            50% { background-color: rgba(255, 255, 0, 0.3); }
+        }
+        
+        .stats-bar {
+            background: linear-gradient(90deg, #001100, #003300);
+            border: 2px solid #00ff00;
+        }
+    </style>
+</head>
+<body class="crt-effect">
+    <div class="scanline"></div>
+    
+    <!-- Sign In Screen -->
+    <div id="signin-screen" class="min-h-screen flex flex-col items-center justify-center p-4 screen-transition">
+        <div class="mb-8">
+            <svg width="160" height="120" viewBox="0 0 32 24" style="image-rendering: pixelated;">
+                <rect width="32" height="24" fill="#22C55E"/>
+                <rect x="0" y="11" width="32" height="2" fill="#16A34A"/>
+                <circle cx="16" cy="12" r="3" fill="#FFF" fill-opacity="0.3"/>
+                <rect x="10" y="8" width="3" height="6" fill="#EF4444"/>
+                <rect x="9" y="7" width="1" height="1" fill="#000"/>
+                <rect x="11" y="7" width="1" height="1" fill="#000"/>
+                <rect x="8" y="14" width="2" height="4" fill="#EF4444"/>
+                <rect x="11" y="14" width="2" height="4" fill="#EF4444"/>
+                <circle cx="18" cy="14" r="1.5" fill="#FFF"/>
+            </svg>
+        </div>
+        <h1 class="glow-text text-green-400 text-xl mb-8 text-center leading-relaxed">
+            RETRO<br/>FANTASY<br/>FOOTBALL
+        </h1>
+        <input
+            type="text"
+            id="username-input"
+            placeholder="ENTER NAME"
+            class="bg-gray-900 text-green-400 border-4 border-green-400 p-3 text-xs mb-6 w-64 focus:outline-none focus:border-yellow-400"
+            maxlength="12"
+        >
+        <button
+            id="start-game-btn"
+            class="pixel-button bg-green-400 text-black px-8 py-3 text-xs border-4 border-green-600 hover:bg-green-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled
+        >
+            START GAME
+        </button>
+    </div>
+
+    <!-- Main Game Screen -->
+    <div id="main-screen" class="min-h-screen bg-black text-green-400 pb-24 hidden screen-transition">
+        <!-- API Status Banner -->
+        <div id="api-status" class="hidden p-3 border-2 mb-4 text-center">
+            <p class="text-xs" id="api-status-text"></p>
+        </div>
+
+        <!-- Home Screen -->
+        <div id="home-screen" class="p-4">
+            <div class="flex justify-center mb-6">
+                <svg width="120" height="120" viewBox="0 0 24 24" style="image-rendering: pixelated;">
+                    <rect x="9" y="4" width="6" height="2" fill="#8B4513"/>
+                    <rect x="8" y="6" width="8" height="4" fill="#FFD4A3"/>
+                    <rect x="9" y="7" width="2" height="1" fill="#000"/>
+                    <rect x="13" y="7" width="2" height="1" fill="#000"/>
+                    <rect x="11" y="9" width="2" height="1" fill="#FF6B6B"/>
+                    <rect x="7" y="10" width="10" height="6" fill="#2563EB"/>
+                    <rect x="6" y="12" width="2" height="4" fill="#FFD4A3"/>
+                    <rect x="16" y="12" width="2" height="4" fill="#FFD4A3"/>
+                    <rect x="8" y="16" width="3" height="6" fill="#1E3A8A"/>
+                    <rect x="13" y="16" width="3" height="6" fill="#1E3A8A"/>
+                </svg>
+            </div>
+            <h2 class="text-center text-yellow-400 text-lg mb-6">
+                MANAGER<br/><span id="manager-name"></span>
+            </h2>
+            
+            <div class="stats-bar p-4 mb-4">
+                <p class="mb-2 text-xs">BUDGET: <span id="budget-display">$40.0M</span></p>
+                <p class="mb-2 text-xs">SQUAD VALUE: <span id="squad-value-display">$0.0M</span></p>
+                <p class="text-yellow-400 text-xs">REMAINING: <span id="remaining-budget-display">$40.0M</span></p>
+            </div>
+
+            <div class="stats-bar p-4">
+                <h3 class="text-yellow-400 mb-4 text-xs">SQUAD (<span id="squad-count">0</span>/5)</h3>
+                <div id="squad-list">
+                    <p class="text-center py-8 text-xs">NO PLAYERS<br/><br/>TAP TEAM ICON<br/>TO SELECT</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Player Selection Screen -->
+        <div id="select-screen" class="p-4 hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-yellow-400 text-base">SELECT TEAM</h2>
+                <button
+                    id="refresh-players-btn"
+                    class="bg-gray-900 border-2 border-green-400 p-2 hover:bg-gray-800"
+                >
+                    <i class="fas fa-sync-alt" id="refresh-icon"></i>
+                </button>
+            </div>
+
+            <div class="flex gap-2 mb-4 overflow-x-auto pb-2" id="position-tabs">
+                <button class="position-tab px-4 py-2 border-2 bg-green-400 text-black border-green-600" data-position="GK">GK</button>
+                <button class="position-tab px-4 py-2 border-2 bg-gray-900 border-green-400" data-position="DEF">DEF</button>
+                <button class="position-tab px-4 py-2 border-2 bg-gray-900 border-green-400" data-position="MID">MID</button>
+                <button class="position-tab px-4 py-2 border-2 bg-gray-900 border-green-400" data-position="FWD">FWD</button>
+            </div>
+
+            <div id="loading-players" class="text-center py-12 hidden">
+                <p class="mb-4 loading-dots text-xs">LOADING</p>
+                <div class="flex justify-center">
+                    <i class="fas fa-spinner fa-spin text-2xl"></i>
+                </div>
+            </div>
+
+            <div id="players-list" class="space-y-2">
+                <!-- Players will be populated here -->
+            </div>
+        </div>
+
+        <!-- Match Screen -->
+        <div id="match-screen" class="p-4 hidden">
+            <h2 class="text-center text-yellow-400 text-lg mb-4">PLAY MATCH</h2>
+            
+            <div id="match-setup" class="hidden">
+                <div class="stats-bar p-4 mb-4">
+                    <p class="text-center mb-3 text-yellow-400 text-xs">YOUR TEAM</p>
+                    <p class="text-xs text-center">OFF: <span id="team-offense">0</span></p>
+                    <p class="text-xs text-center">DEF: <span id="team-defense">0</span></p>
+                </div>
+                
+                <p class="text-center text-yellow-400 mb-3 text-xs">CHOOSE OPPONENT</p>
+                
+                <div id="opponent-options" class="space-y-3">
+                    <!-- Opponents will be populated here -->
+                </div>
+            </div>
+
+            <div id="match-result" class="hidden">
+                <div class="stats-bar p-6">
+                    <h3 class="text-yellow-400 text-center mb-6 text-xs">MATCH RESULT</h3>
+                    <div class="text-center mb-6">
+                        <p class="text-3xl mb-4">
+                            <span id="my-goals">0</span> - <span id="opp-goals">0</span>
+                        </p>
+                        <p id="match-result-text" class="text-xl mb-2"></p>
+                    </div>
+                    <p class="text-center mb-6 text-xs">VS <span id="opponent-name"></span></p>
+                    <button
+                        id="play-again-btn"
+                        class="pixel-button bg-green-400 text-black px-6 py-2 border-2 border-green-600 w-full hover:bg-green-300"
+                    >
+                        PLAY AGAIN
+                    </button>
+                </div>
+            </div>
+
+            <div id="insufficient-players" class="stats-bar p-6 text-center">
+                <p class="mb-4 text-xs">NEED 5 PLAYERS<br/>TO PLAY</p>
+                <button
+                    id="select-players-btn"
+                    class="pixel-button bg-green-400 text-black px-6 py-2 border-2 border-green-600 hover:bg-green-300"
+                >
+                    SELECT PLAYERS
+                </button>
+            </div>
+        </div>
+
+        <!-- Leaderboard Screen -->
+        <div id="leaderboard-screen" class="p-4 hidden">
+            <h2 class="text-center text-yellow-400 text-lg mb-4">LEADERBOARD</h2>
+            <div class="stats-bar p-4">
+                <div class="space-y-2" id="leaderboard-list">
+                    <!-- Leaderboard entries will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t-4 border-green-400 p-3 flex justify-around z-50">
+        <button 
+            class="nav-btn p-2 transition-colors text-green-400 hover:text-yellow-400" 
+            data-screen="home"
+            title="Home"
+        >
+            <i class="fas fa-home text-xl"></i>
+        </button>
+        <button 
+            class="nav-btn p-2 transition-colors text-green-400 hover:text-yellow-400" 
+            data-screen="select"
+            title="Select Team"
+        >
+            <i class="fas fa-users text-xl"></i>
+        </button>
+        <button 
+            class="nav-btn p-2 transition-colors text-green-400 hover:text-yellow-400" 
+            data-screen="match"
+            title="Play Match"
+        >
+            <i class="fas fa-futbol text-xl"></i>
+        </button>
+        <button 
+            class="nav-btn p-2 transition-colors text-green-400 hover:text-yellow-400" 
+            data-screen="leaderboard"
+            title="Leaderboard"
+        >
+            <i class="fas fa-trophy text-xl"></i>
+        </button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
